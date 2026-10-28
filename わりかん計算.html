@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>わりかん計算</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --bg:#e6eff7; --card:#ffffff; --ink:#14213d; --sub:#5b6b86; --line:#cfdbe8;
+  --accent:#2a6fdb; --accent-ink:#ffffff; --hl:#ffc857; --hl-ink:#14213d; --danger:#c0392b;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1b2e; --card:#18283f; --ink:#e8eef8; --sub:#9db0cc; --line:#2c4062;
+    --accent:#6ba3ff; --accent-ink:#0f1b2e; --hl:#ffc857; --hl-ink:#14213d; --danger:#ff8c7a;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1b2e; --card:#18283f; --ink:#e8eef8; --sub:#9db0cc; --line:#2c4062;
+  --accent:#6ba3ff; --accent-ink:#0f1b2e; --hl:#ffc857; --hl-ink:#14213d; --danger:#ff8c7a;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Zen Maru Gothic","Hiragino Maru Gothic ProN","Noto Sans JP",sans-serif;font-weight:500;line-height:1.6}
+main{max-width:980px;margin:0 auto;padding:20px 16px 48px}
+h1{font-size:clamp(28px,5vw,44px);font-weight:900;margin:8px 0 2px;letter-spacing:.02em}
+.lead{margin:0 0 20px;color:var(--sub)}
+.grid{display:grid;grid-template-columns:1fr;gap:18px}
+@media(min-width:820px){.grid{grid-template-columns:1.1fr .9fr;align-items:start}}
+.panel{background:var(--card);border:2px solid var(--ink);border-radius:14px;padding:18px}
+h2{font-size:18px;margin:0 0 12px;font-weight:700}
+label{display:block;font-size:14px;color:var(--sub);margin-bottom:4px}
+input,select,button{font:inherit;color:inherit}
+input,select{width:100%;padding:10px 12px;border:2px solid var(--line);border-radius:10px;background:var(--bg);min-height:44px}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.total{font-size:28px;font-weight:900;text-align:right}
+.row{display:grid;grid-template-columns:1fr 92px 44px;gap:8px;margin-bottom:8px}
+.row input[type=number]{text-align:center}
+.units{display:flex;gap:8px;margin:14px 0 4px;flex-wrap:wrap}
+.units label{margin:0;flex:1;min-width:72px}
+.units input{position:absolute;opacity:0;width:0;min-height:0}
+.units span{display:block;text-align:center;padding:10px 6px;border:2px solid var(--line);border-radius:10px;background:var(--bg);cursor:pointer;color:var(--ink);font-size:15px}
+.units input:checked+span{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
+.units input:focus-visible+span{outline:3px solid var(--accent);outline-offset:2px}
+.btn{border:2px solid var(--ink);background:var(--card);border-radius:10px;padding:10px 14px;cursor:pointer;min-height:44px;font-weight:700}
+.btn.main{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.x{padding:0;color:var(--danger);border-color:var(--line)}
+.btn:active{transform:translateY(1px)}
+.hint{font-size:13px;color:var(--sub);margin:8px 0 0}
+.receipt{background:var(--card);border:2px solid var(--ink);border-radius:14px 14px 0 0;padding:20px 18px 26px;position:relative;
+  -webkit-mask:radial-gradient(circle 7px at 50% 100%,transparent 98%,#000) 0 100%/16px 51% repeat-x,linear-gradient(#000,#000) 0 0/100% 50% no-repeat;
+  mask:radial-gradient(circle 7px at 50% 100%,transparent 98%,#000) 0 100%/16px 51% repeat-x,linear-gradient(#000,#000) 0 0/100% 50% no-repeat}
+.receipt h2{text-align:center;border-bottom:2px dashed var(--line);padding-bottom:10px}
+.line{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:8px 0;border-bottom:1px dotted var(--line)}
+.line .nm{overflow-wrap:anywhere}
+.line .nm small{display:block;color:var(--sub);font-size:12px}
+.amt{font-weight:900;font-size:22px;white-space:nowrap}
+.amt.org{background:var(--hl);color:var(--hl-ink);padding:0 8px;border-radius:6px}
+.sum{display:flex;justify-content:space-between;margin-top:12px;font-weight:700}
+.err{color:var(--danger);font-weight:700;text-align:center;padding:14px 0}
+.actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.actions .btn{flex:1}
+.toast{min-height:22px;font-size:14px;color:var(--sub);margin-top:8px;text-align:center}
+@media(prefers-reduced-motion:no-preference){.amt{transition:opacity .15s}}
+</style>
+</head>
+<body>
+<main>
+  <h1>わりかん計算</h1>
+  <p class="lead">合計金額と人数を入れるだけ。多めに払う人・少なめの人も設定できます。</p>
+
+  <div class="grid">
+    <section class="panel" aria-labelledby="h-in">
+      <h2 id="h-in">入力</h2>
+      <label for="total">合計金額（円）</label>
+      <input id="total" class="total" type="number" inputmode="numeric" min="0" step="1" value="12800">
+
+      <div style="margin-top:18px">
+        <label>メンバーと負担の割合（1 = ふつう）</label>
+        <div id="rows"></div>
+        <button class="btn" id="add" type="button">＋ 人を追加</button>
+        <p class="hint">先頭の人が幹事です。端数の調整は幹事が引き受けます。</p>
+      </div>
+
+      <div class="units" role="radiogroup" aria-label="切り上げの単位">
+        <label><input type="radio" name="unit" value="1"><span>1円</span></label>
+        <label><input type="radio" name="unit" value="10"><span>10円</span></label>
+        <label><input type="radio" name="unit" value="100" checked><span>100円</span></label>
+        <label><input type="radio" name="unit" value="500"><span>500円</span></label>
+      </div>
+      <p class="hint">幹事以外の人は、この単位で切り上げた金額を払います。</p>
+    </section>
+
+    <section aria-live="polite" aria-labelledby="h-out">
+      <div class="receipt">
+        <h2 id="h-out">お会計</h2>
+        <div id="out"></div>
+      </div>
+      <div class="actions">
+        <button class="btn main" id="copy" type="button">結果をコピー</button>
+        <button class="btn" id="reset" type="button">リセット</button>
+      </div>
+      <div class="toast" id="toast"></div>
+    </section>
+  </div>
+</main>
+
+<script>
+(function(){
+  var DEFAULT=[["幹事",1],["Aさん",1],["Bさん",1],["Cさん",1]];
+  var rowsEl=document.getElementById("rows"), outEl=document.getElementById("out"),
+      totalEl=document.getElementById("total"), toastEl=document.getElementById("toast");
+  var lastText="";
+
+  function yen(n){return "¥"+Math.round(n).toLocaleString("ja-JP");}
+  function unit(){return Number(document.querySelector('input[name="unit"]:checked').value);}
+
+  function addRow(name,w){
+    var r=document.createElement("div"); r.className="row";
+    var n=document.createElement("input"); n.type="text"; n.value=name; n.maxLength=12; n.setAttribute("aria-label","名前");
+    var q=document.createElement("input"); q.type="number"; q.value=w; q.min="0"; q.step="0.5"; q.setAttribute("aria-label","割合");
+    var x=document.createElement("button"); x.type="button"; x.className="btn x"; x.textContent="×"; x.setAttribute("aria-label","削除");
+    x.onclick=function(){ if(rowsEl.children.length>2){ r.remove(); calc(); } else { say("2人以上必要です"); } };
+    n.oninput=q.oninput=calc;
+    r.append(n,q,x); rowsEl.appendChild(r);
+  }
+
+  function members(){
+    return Array.prototype.map.call(rowsEl.children,function(r,i){
+      var v=r.querySelectorAll("input");
+      return {name:v[0].value.trim()||("メンバー"+(i+1)), w:Math.max(0,parseFloat(v[1].value)||0)};
+    });
+  }
+
+  function say(t){ toastEl.textContent=t; clearTimeout(say.t); say.t=setTimeout(function(){toastEl.textContent="";},2500); }
+
+  function calc(){
+    var T=Math.max(0,Math.floor(Number(totalEl.value)||0)), U=unit(), m=members();
+    var W=m.reduce(function(a,b){return a+b.w;},0);
+    outEl.innerHTML="";
+    if(T<=0||W<=0){
+      var e=document.createElement("div"); e.className="err";
+      e.textContent=T<=0?"合計金額を入力してください":"割合を1人以上に設定してください";
+      outEl.appendChild(e); lastText=""; return;
+    }
+    var res=m.map(function(p){
+      var raw=T*p.w/W;
+      return {name:p.name, raw:raw, pay:Math.ceil(raw/U)*U};
+    });
+    var others=res.slice(1).reduce(function(a,b){return a+b.pay;},0);
+    res[0].pay=Math.max(0,T-others);
+    var paid=res.reduce(function(a,b){return a+b.pay;},0);
+
+    var lines=["わりかん結果（合計 "+yen(T)+"）"];
+    res.forEach(function(p,i){
+      var d=document.createElement("div"); d.className="line";
+      var nm=document.createElement("div"); nm.className="nm"; nm.textContent=p.name;
+      if(i===0){var s=document.createElement("small"); s.textContent="幹事（端数を調整）"; nm.appendChild(s);}
+      var a=document.createElement("div"); a.className="amt"+(i===0?" org":""); a.textContent=yen(p.pay);
+      d.append(nm,a); outEl.appendChild(d);
+      lines.push(p.name+(i===0?"（幹事）":"")+"："+yen(p.pay));
+    });
+    var s=document.createElement("div"); s.className="sum";
+    var l=document.createElement("span"); l.textContent="合計";
+    var r=document.createElement("span"); r.textContent=yen(paid);
+    s.append(l,r); outEl.appendChild(s);
+    lastText=lines.join("\n");
+  }
+
+  document.getElementById("add").onclick=function(){
+    if(rowsEl.children.length>=20){say("最大20人までです");return;}
+    addRow(String.fromCharCode(65+rowsEl.children.length-1)+"さん",1); calc();
+  };
+  document.getElementById("reset").onclick=function(){
+    rowsEl.innerHTML=""; DEFAULT.forEach(function(d){addRow(d[0],d[1]);});
+    totalEl.value=12800; document.querySelector('input[name="unit"][value="100"]').checked=true; calc();
+  };
+  document.getElementById("copy").onclick=function(){
+    if(!lastText){say("コピーする結果がありません");return;}
+    function ok(){say("コピーしました");}
+    function fallback(){
+      var t=document.createElement("textarea"); t.value=lastText; document.body.appendChild(t); t.select();
+      try{document.execCommand("copy");ok();}catch(e){say("コピーできませんでした");}
+      t.remove();
+    }
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(lastText).then(ok,fallback);}else{fallback();}
+  };
+  totalEl.oninput=calc;
+  Array.prototype.forEach.call(document.querySelectorAll('input[name="unit"]'),function(i){i.onchange=calc;});
+
+  DEFAULT.forEach(function(d){addRow(d[0],d[1]);});
+  calc();
+})();
+</script>
+</body>
+</html>
